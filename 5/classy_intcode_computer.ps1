@@ -43,7 +43,7 @@ class Instruction {
         $this.P3Mode = [string]$PaddedInstruction[0]
 
 
-        If ($Value1 = $State[$Index + 1]) {
+        If (($Value1 = $State[$Index + 1]) -ne $null) {
             If ($this.P1Mode -or ($this.Opcode -eq 3 -or $this.Opcode -eq 4)) {
                 $this.P1 = $Value1
             }
@@ -55,7 +55,7 @@ class Instruction {
             Write-Verbose "There was no value to read at $($Index + 1)."
         }
 
-        If ($Value2 = $State[$Index + 2]) {
+        If (($Value2 = $State[$Index + 2]) -ne $null) {
             If ($this.P2Mode) {
                 $this.P2 = $Value2
             }
@@ -143,6 +143,49 @@ class IntcodeComputer {
                     #Output
                     Write-Host "The value at $($Instruction.P1) is $($this.CurrentState[$Instruction.P1])"
                     $this.CurrentInstructionIndex += 2
+                }
+                5 {
+                    # jump-if-true
+                    If ($Instruction.P1) {
+                        $this.CurrentInstructionIndex = $Instruction.P2
+                    }
+                    Else {
+                        $this.CurrentInstructionIndex += 3
+                    }
+                }
+                6 {
+                    # jump-if-false
+                    If (-Not $Instruction.P1) {
+                        $this.CurrentInstructionIndex = $Instruction.P2
+                    }
+                    Else {
+                        $this.CurrentInstructionIndex += 3
+                    }
+                }
+                7 {
+                    # less than
+                    If ($Instruction.P1 -lt $Instruction.P2) {
+                        $this.CurrentState[$Instruction.P3] = 1
+                    }
+                    Else {
+                        $this.CurrentState[$Instruction.P3] = 0
+                    }
+                    $this.CurrentInstructionIndex += 4
+                }
+                8 {
+                    # equals
+                    Write-Verbose "Testing equality"
+                    If ($Instruction.P1 -eq $Instruction.P2) {
+                        Write-Verbose "P1 ($($Instruction.P1)) is equal to P2 ($($Instruction.P2))"
+                        Write-Verbose "Saving '1' to $($Instruction.P3)"
+                        $this.CurrentState[$Instruction.P3] = 1
+                    }
+                    Else {
+                        Write-Verbose "P1 ($($Instruction.P1)) is not equal to P2 ($($Instruction.P2))"
+                        Write-Verbose "Saving '0' to $($Instruction.P3)"
+                        $this.CurrentState[$Instruction.P3] = 0
+                    }
+                    $this.CurrentInstructionIndex += 4
                 }
                 99 {
                     Write-Host "Exit code encountered. Shutting down..."
